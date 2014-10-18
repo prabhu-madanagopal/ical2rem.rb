@@ -180,7 +180,7 @@ class Ical2Rem
       if event.bounded? && (event.occurrences.length > 1)
         last = event.occurrences.last.dtend
         if not same_day?(vstart, last)
-          print " UNTIL #{last.strftime("%b")} #{last.day} #{vend.year}"
+          print " UNTIL #{last.strftime("%b")} #{last.day} #{last.year}"
         end
       end
 
