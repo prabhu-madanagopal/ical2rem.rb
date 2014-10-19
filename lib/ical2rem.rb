@@ -187,6 +187,15 @@ class Ical2Rem
       # set up recurring event using the first recurrence rule.  only daily and
       # weekly recurrence supported
       if (event.rrule.length > 0)
+	rem_days = {"SU" => "SUN", "MO" => "MON", "TU" => "TUE", "WE" => "WED", "TH" => "THU", "FR" => "FRI", "SA" => "SAT"}
+       	bydays = event.rrule_property[0].by_list[:byday]
+	Array(bydays).each do |byday|
+		print " #{rem_days[byday.to_s]}"
+	end
+	bymonthdays = event.rrule_property[0].by_list[:bymonthday]
+	Array(bymonthdays).each do |bymonthday|
+		print " #{bymonthday.to_s}"
+	end
         interval = event.rrule_property[0].interval
         case event.rrule_property[0].freq
         when "DAILY"
