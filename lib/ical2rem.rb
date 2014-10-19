@@ -173,7 +173,40 @@ class Ical2Rem
 
       # The starting date, e.g.
       # REM Jan 01 2008
-      print "REM #{vstart.strftime("%b")} #{vstart.day} #{vstart.year}"
+      print "REM"
+      start_date = " #{vstart.strftime("%b")} #{vstart.day} #{vstart.year}"
+      
+      # set up recurring event using the first recurrence rule.  only daily and
+      # weekly recurrence supported
+      if (event.rrule.length > 0)
+      	rem_days = {"SU" => "SUN", "MO" => "MON", "TU" => "TUE", "WE" => "WED", "TH" => "THU", "FR" => "FRI", "SA" => "SAT"}
+        bydays = event.rrule_property[0].by_list[:byday]
+        
+      	has_multiple_weekdays = false
+        if !bydays.nil? && bydays.length > 1
+          has_multiple_weekdays = true
+        end 
+      	Array(bydays).each do |byday|
+      		print " #{rem_days[byday.to_s]}"
+      	end
+      	#bymonthdays = event.rrule_property[0].by_list[:bymonthday]
+      	#Array(bymonthdays).each do |bymonthday|
+      	#	print " #{bymonthday.to_s}"
+      	#end
+      	unless has_multiple_weekdays
+      	    #complex intervals are not supported. intervals are supported only when bydays are not specified
+      	    interval = event.rrule_property[0].interval
+            case event.rrule_property[0].freq
+            when "DAILY"
+              print " *#{interval}"
+       	    when "WEEKLY"
+              print " *#{interval * 7}"
+       	    end
+      	end
+      end
+      unless has_multiple_weekdays
+        print start_date
+      end 
 
       # Check if we need to print an ending date with UNTIL.
       is_datetime = true if event.dtstart.class == DateTime
@@ -181,27 +214,6 @@ class Ical2Rem
         last = event.occurrences.last.dtend
         if not same_day?(vstart, last)
           print " UNTIL #{last.strftime("%b")} #{last.day} #{last.year}"
-        end
-      end
-
-      # set up recurring event using the first recurrence rule.  only daily and
-      # weekly recurrence supported
-      if (event.rrule.length > 0)
-	rem_days = {"SU" => "SUN", "MO" => "MON", "TU" => "TUE", "WE" => "WED", "TH" => "THU", "FR" => "FRI", "SA" => "SAT"}
-       	bydays = event.rrule_property[0].by_list[:byday]
-	Array(bydays).each do |byday|
-		print " #{rem_days[byday.to_s]}"
-	end
-	bymonthdays = event.rrule_property[0].by_list[:bymonthday]
-	Array(bymonthdays).each do |bymonthday|
-		print " #{bymonthday.to_s}"
-	end
-        interval = event.rrule_property[0].interval
-        case event.rrule_property[0].freq
-        when "DAILY"
-          print " *#{interval}"
-        when "WEEKLY"
-          print " *#{interval * 7}"
         end
       end
 
@@ -222,10 +234,18 @@ class Ical2Rem
       if is_datetime
         print " %3"
       end
+      event.summary = event.summary.gsub("[","(") if event.summary
+      event.summary = event.summary.gsub("]",")") if event.summary
       print " %\"#{event.summary}" 
 
       # If a location for the event is given, we add it to the message.
+      event.location = event.location.gsub("[","(") if event.location
+      event.location = event.location.gsub("]",")") if event.location
       print " at #{event.location}" if event.location
+      event.description = event.description.gsub("[","(") if event.description
+      event.description = event.description.gsub("]",")") if event.description
+      event.description = event.description.gsub("\n","%_") if event.description
+      print "%_ #{event.description}" if event.description
       puts "\%\"%"
     end
   end
