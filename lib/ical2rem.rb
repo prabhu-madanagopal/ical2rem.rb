@@ -130,6 +130,9 @@ class Ical2Rem
     end
   end
 
+  def previous_day(date)
+    return date - 1
+  end
   # Returns the duration of an event.
   #
   # @param [RiCal::Component::Event] event The event to check the duration of
@@ -199,8 +202,10 @@ class Ical2Rem
             case event.rrule_property[0].freq
             when "DAILY"
               print " *#{interval}"
+	      repeating = true
        	    when "WEEKLY"
               print " *#{interval * 7}"
+	      repeating = true
        	    end
       	end
       end
@@ -213,20 +218,25 @@ class Ical2Rem
       if event.bounded? && (event.occurrences.length > 1)
         last = event.occurrences.last.dtend
         if not same_day?(vstart, last)
+	  recurring = true	
           print " UNTIL #{last.strftime("%b")} #{last.day} #{last.year}"
         end
       end
 
+      all_day_event = (duration/3600) >= 24
+      if all_day_event and not recurring
+	      print " *1" unless repeating
+	      till = previous_day(vend)
+	      print " UNTIL #{till.strftime("%b")} #{till.day} #{till.year}"
       # If +DTSTART+ is a DATE-TIME value, add an AT clause, e.g.
       # AT 10:00 DURATION 2:0
-      if is_datetime
+      elsif is_datetime
         print " AT #{vstart.strftime("%H:%M")}"
         print " DURATION #{duration / 3600}:#{(duration % 3600) / 60}"
+      	# The advance minutes to show this entry, e.g.
+      	# +3
+      	print " +#{@options.lead}"
       end
-
-      # The advance minutes to show this entry, e.g.
-      # +3
-      print " +#{@options.lead}"
 
       # The message of the event. If +DTSTART+ is a DATE-TIME object, the
       # starting time is also printed by inserting the variable "%3".
@@ -234,16 +244,13 @@ class Ical2Rem
       if is_datetime
         print " %3"
       end
-      event.summary = event.summary.gsub("[","(") if event.summary
-      event.summary = event.summary.gsub("]",")") if event.summary
+      event.summary = event.summary.gsub("[","[\"[\"]") if event.summary
       print " %\"#{event.summary}" 
 
       # If a location for the event is given, we add it to the message.
-      event.location = event.location.gsub("[","(") if event.location
-      event.location = event.location.gsub("]",")") if event.location
+      event.location = event.location.gsub("[","[\"[\"]") if event.location
       print " at #{event.location}" if event.location
-      event.description = event.description.gsub("[","(") if event.description
-      event.description = event.description.gsub("]",")") if event.description
+      event.description = event.description.gsub("[","[\"[\"]") if event.description
       event.description = event.description.gsub("\n","%_") if event.description
       print "%_ #{event.description}" if event.description
       puts "\%\"%"
